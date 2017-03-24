@@ -57,13 +57,14 @@ ggmap(Ballard)+
   geom_point(aes(x=Long, y=Lat, color=factor(year(INCDATE))), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
   labs(title = "NW Seattle Bike Accidents, 2012-2016")
 
-# Create variable "Striking" to describe "Who Hit Who", which can be determined from SDOT collision code
-bikedat$Striking = factor(ifelse(bikedat$SDOT_COLCODE >= 10 & bikedat$SDOT_COLCODE <= 29, "Vehicle in Operation", 
-                          ifelse(bikedat$SDOT_COLCODE >= 30 & bikedat$SDOT_COLCODE <= 49, "Driverless Vehicle",
-                                 ifelse(bikedat$SDOT_COLCODE >= 50 & bikedat$SDOT_COLCODE <= 69, "Cyclist", 
-                                        ifelse(bikedat$SDOT_COLCODE >= 70 & bikedat$SDOT_COLCODE <= 76, "Pedestrian or Non-Traffic Cyclist",
-                                               ifelse(bikedat$SDOT_COLCODE >= 80, "Pedestrian Struck", NA))))))
-
+# Create variable "Striker" to describe "Who Hit Who", which can be determined from SDOT collision code
+  # dplyr's case_when() is useful for a more readable if-else syntax
+bikedat <- bikedat %>% mutate(Striker = factor(case_when(.$SDOT_COLCODE >= 10 & .$SDOT_COLCODE <= 29 ~ "Vehicle in Operation",
+                                    .$SDOT_COLCODE >= 30 & .$SDOT_COLCODE <= 49 ~ "Driverless Vehicle",
+                                    .$SDOT_COLCODE >= 50 & .$SDOT_COLCODE <= 69 ~ "Cyclist",
+                                    .$SDOT_COLCODE >= 70 & .$SDOT_COLCODE <= 76 ~ "Pedestrian or Non-Traffic Cyclist",
+                                    .$SDOT_COLCODE >= 80 ~ "Pedestrian Struck",
+                                    TRUE ~ as.character(NA))))
 
 ggmap(Ballard)+
   geom_point(aes(x=Long, y=Lat, color=Striking), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
@@ -76,7 +77,3 @@ bikedat %>% group_by(year(INCDATE)) %>%
   ggplot(aes(x=year, y=nfatal, group=1))+
   geom_line()
 
-bikedat %>% 
-  mutate(dist_buckets = case_when(.$DISTANCE<50 ~ "0-50", 
-                                  .$DISTANCE<100 ~ "50-100",
-                                  TRUE ~ "100+"))
