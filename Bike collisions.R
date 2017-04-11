@@ -51,15 +51,18 @@ ggmap(seamap) +
 # Which accidents occurred on the Burke Gilman?
 ggmap(BGT) +
   geom_point(aes(x=Long, y=Lat, color=factor(LIGHTCOND)), data = bikedat[grepl("BURKE GILMAN", bikedat$LOCATION),])+
-  labs(title = "Burke Gilman Accidents")
+  labs(title = "Burke Gilman Accidents",
+       subtitle = "Not Many Accidents are Identified as being on the Burke Gilman")
 
 ggmap(Ballard)+
   geom_point(aes(x=Long, y=Lat, color=factor(year(INCDATE))), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
-  labs(title = "NW Seattle Bike Accidents, 2012-2016")
+  labs(title = "NW Seattle Bike Accidents, 2012-2016",
+       subtitle = "Most Accidents Occur on Arterial Streets")
 
 # Create variable "Striker" to describe "Who Hit Who", which can be determined from SDOT collision code
   # dplyr's case_when() is useful for a more readable if-else syntax
-bikedat <- bikedat %>% mutate(Striker = factor(case_when(.$SDOT_COLCODE >= 10 & .$SDOT_COLCODE <= 29 ~ "Vehicle in Operation",
+bikedat <- bikedat %>% 
+  mutate(Striker = factor(case_when(.$SDOT_COLCODE >= 10 & .$SDOT_COLCODE <= 29 ~ "Vehicle in Operation",
                                     .$SDOT_COLCODE >= 30 & .$SDOT_COLCODE <= 49 ~ "Driverless Vehicle",
                                     .$SDOT_COLCODE >= 50 & .$SDOT_COLCODE <= 69 ~ "Cyclist",
                                     .$SDOT_COLCODE >= 70 & .$SDOT_COLCODE <= 76 ~ "Pedestrian or Non-Traffic Cyclist",
@@ -67,7 +70,7 @@ bikedat <- bikedat %>% mutate(Striker = factor(case_when(.$SDOT_COLCODE >= 10 & 
                                     TRUE ~ as.character(NA))))
 
 ggmap(Ballard)+
-  geom_point(aes(x=Long, y=Lat, color=Striking), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
+  geom_point(aes(x=Long, y=Lat, color=Striker), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
   labs(title = "NW Seattle Bike Accidents, 2012-2016")
 
 # How many accidents had fatalities each year?
@@ -77,3 +80,11 @@ bikedat %>% group_by(year(INCDATE)) %>%
   ggplot(aes(x=year, y=nfatal, group=1))+
   geom_line()
 
+bikedat %>% group_by(year(INCDATE), Striker) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=Striker))+
+  geom_col()+
+  labs(y="Number of Accidents",
+       title="Accidents Have Increased Over Time",
+       subtitle="Proportion of Accidents Caused by Vehicles Increasing")
