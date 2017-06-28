@@ -14,6 +14,7 @@ library(readr)
 library(dplyr)
 library(lubridate)
 library(ggmap)
+library(plotly)
 
 # Read in data file
 bikedat <- read_csv("SDOT_Collisions.csv", guess_max = 1500)
@@ -44,9 +45,10 @@ ggmap(seamap) +
   geom_point(aes(x=Long, y=Lat, color=factor(year(INCDATE))), data = bikedat)
 
 # Map of 2016 collisions, colored by time of day
-ggmap(seamap) +
+m.2016 <- ggmap(seamap) +
   geom_point(aes(x=Long, y=Lat, color=factor(LIGHTCOND)), data = bikedat[year(bikedat$INCDATE)==2016,])+
   labs(title = "Most Accidents in 2016 Happened During Daylight")
+m.2016
 
 # Which accidents occurred on the Burke Gilman?
 ggmap(BGT) +
@@ -88,3 +90,60 @@ bikedat %>% group_by(year(INCDATE), Striker) %>%
   labs(y="Number of Accidents",
        title="Accidents Have Increased Over Time",
        subtitle="Proportion of Accidents Caused by Vehicles Increasing")
+
+bikedat %>% group_by(year(INCDATE), Striker) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=Striker))+
+  geom_col(position = "fill")+
+  labs(y="Proportion of Accidents",
+       title="Accidents Have Increased Over Time",
+       subtitle="Proportion of Accidents Caused by Vehicles Increasing")
+
+bikedat %>% group_by(year(INCDATE), JUNCTIONTYPE) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=JUNCTIONTYPE))+
+  geom_col(position = "fill")+
+  labs(y="Proportion of Accidents",
+       title="Largest Share of Accidents At Intersections")
+
+bikedat %>% group_by(year(INCDATE), JUNCTIONTYPE) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=JUNCTIONTYPE))+
+  geom_col()+
+  labs(y="Number of Accidents",
+       title="Largest Share of Accidents At Intersections")
+
+bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=LIGHTCOND))+
+  geom_col()+
+  labs(y="Proportion of Accidents",
+       title="Most Accidents are During Daylight")
+
+bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=LIGHTCOND))+
+  geom_col(position = "fill")+
+  labs(y="Proportion of Accidents",
+       title="Most Accidents are During Daylight")
+
+bikedat %>% group_by(year(INCDATE), ROADCOND) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=ROADCOND))+
+  geom_col(position = "fill")+
+  labs(y="Proportion of Accidents",
+       title="Most Accidents Have Dry Road Conditions")
+
+ggplot(bikedat, aes(x=PERSONCOUNT, y=SERIOUSINJURIES, color=Striker))+
+  geom_point(position = position_jitter(.10))+
+  facet_grid(~ PEDCYLCOUNT)
+
+ggplot(bikedat, aes(x=PEDCOUNT, y=PEDCYLCOUNT, color=Striker))+
+  geom_point(position = position_jitter(.10))+
+  facet_grid(~ PERSONCOUNT)
