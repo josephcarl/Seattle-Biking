@@ -50,7 +50,7 @@ m.2016 <- ggmap(seamap) +
   labs(title = "Most Accidents in 2016 Happened During Daylight")
 m.2016
 
-# Which accidents occurred on the Burke Gilman?
+  # Which accidents occurred on the Burke Gilman?
 ggmap(BGT) +
   geom_point(aes(x=Long, y=Lat, color=factor(LIGHTCOND)), data = bikedat[grepl("BURKE GILMAN", bikedat$LOCATION),])+
   labs(title = "Burke Gilman Accidents",
@@ -73,7 +73,8 @@ bikedat <- bikedat %>%
 
 ggmap(Ballard)+
   geom_point(aes(x=Long, y=Lat, color=Striker), data = bikedat[year(bikedat$INCDATE)>= 2012 & year(bikedat$INCDATE)<= 2016,])+
-  labs(title = "NW Seattle Bike Accidents, 2012-2016")
+  labs(title = "NW Seattle Bike Accidents, 2012-2016",
+       subtitle = "Most Accidents Occur on Arterial Streets")
 
 # How many accidents had fatalities each year?
 bikedat %>% group_by(year(INCDATE)) %>% 
@@ -116,6 +117,15 @@ bikedat %>% group_by(year(INCDATE), JUNCTIONTYPE) %>%
   labs(y="Number of Accidents",
        title="Largest Share of Accidents At Intersections")
 
+bikedat %>% group_by(year(INCDATE), JUNCTIONTYPE) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, group=JUNCTIONTYPE, color=JUNCTIONTYPE))+
+  geom_line()+
+  labs(y="Number of Accidents",
+       title="Largest Share of Accidents At Intersections")
+
+
 bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>% 
   summarise(n = n()) %>% 
   rename(year = `year(INCDATE)`) %>% 
@@ -123,6 +133,15 @@ bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>%
   geom_col()+
   labs(y="Proportion of Accidents",
        title="Most Accidents are During Daylight")
+
+bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, color=LIGHTCOND, group=LIGHTCOND))+
+  geom_line()+
+  labs(y="Number of Accidents",
+       title="Most Accidents are During Daylight")
+
 
 bikedat %>% group_by(year(INCDATE), LIGHTCOND) %>% 
   summarise(n = n()) %>% 
@@ -140,10 +159,98 @@ bikedat %>% group_by(year(INCDATE), ROADCOND) %>%
   labs(y="Proportion of Accidents",
        title="Most Accidents Have Dry Road Conditions")
 
-ggplot(bikedat, aes(x=PERSONCOUNT, y=SERIOUSINJURIES, color=Striker))+
+bikedat %>% group_by(year(INCDATE), WEATHER) %>% 
+  summarise(n = n()) %>% 
+  rename(year = `year(INCDATE)`) %>% 
+  ggplot(aes(x=year, y=n, fill=WEATHER))+
+  geom_col(position = "fill")+
+  labs(y="Proportion of Accidents",
+       title="Most Accidents Have Clear Weather Conditions")
+
+s.person <- ggplot(bikedat, aes(x=PERSONCOUNT, y=SERIOUSINJURIES, color=Striker))+
   geom_point(position = position_jitter(.10))+
   facet_grid(~ PEDCYLCOUNT)
+s.person
+
+plotly::ggplotly(s.person)
+# 
+plot_ly(bikedat, x = ~PERSONCOUNT, y = ~SERIOUSINJURIES, color = ~Striker, type = "scatter")
+
+plotly::plot_ly(x=1:10, y=1:10)
 
 ggplot(bikedat, aes(x=PEDCOUNT, y=PEDCYLCOUNT, color=Striker))+
   geom_point(position = position_jitter(.10))+
   facet_grid(~ PERSONCOUNT)
+
+
+# Given that an accident occurs at an intersection, who is most likely to be the Striker?
+
+# Construct a frequency table of striker and junction type
+junc_strik <- bikedat %>% group_by(Striker, JUNCTIONTYPE) %>% 
+  summarise(accid = n())
+
+junc_strik_freq <- xtabs(accid ~ Striker + JUNCTIONTYPE, data = junc_strik)
+
+# Is Striker type independent of JunctionType?
+  # Use a chi-squared test
+chisq.test(junc_strik_freq)
+  # p-value = 0, reject Ho that striker is independent of junction type
+
+junc_strike_probs <- as.data.frame(prop.table(junc_strik_freq, 2))
+
+
+# Do the accidents with serious injuries/fatalities have anything in common? (location, time of day, striker, road conditions, etc)
+
+# Does time of day affect # of crashes?
+bikedat %>% mutate(HoD = hour(INCDTTM)) %>% 
+  group_by(Striker, HoD) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=HoD, y=numCrash, group=Striker, color=Striker))+
+  geom_line()
+
+bikedat %>% mutate(HoD = hour(INCDTTM)) %>% 
+  group_by(JUNCTIONTYPE, HoD) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=HoD, y=numCrash, group=JUNCTIONTYPE, color=JUNCTIONTYPE))+
+  geom_line()
+
+bikedat %>% mutate(HoD = hour(INCDTTM)) %>% 
+  group_by(ROADCOND, HoD) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=HoD, y=numCrash, group=ROADCOND, color=ROADCOND))+
+  geom_line()
+
+bikedat %>% mutate(HoD = hour(INCDTTM)) %>% 
+  group_by(WEATHER, HoD) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=HoD, y=numCrash, group=WEATHER, color=WEATHER))+
+  geom_line()
+
+bikedat %>% mutate(DoW = factor(weekdays(INCDTTM), levels=c("Monday", "Tuesday", "Wednesday",
+                                                            "Thursday", "Friday", "Saturday", 
+                                                            "Sunday"))) %>% 
+  group_by(ROADCOND, DoW) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=DoW, y=numCrash, group=ROADCOND, color=ROADCOND))+
+  geom_line()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+bikedat %>% mutate(DoW = factor(weekdays(INCDTTM), levels=c("Monday", "Tuesday", "Wednesday",
+                                                            "Thursday", "Friday", "Saturday", 
+                                                            "Sunday"))) %>% 
+  group_by(WEATHER, DoW) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=DoW, y=numCrash, group=WEATHER, color=WEATHER))+
+  geom_line()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+bikedat %>% mutate(DoW = factor(weekdays(INCDTTM), levels=c("Monday", "Tuesday", "Wednesday",
+                                                            "Thursday", "Friday", "Saturday", 
+                                                            "Sunday")),
+                   HoD = hour(INCDTTM)) %>% 
+  group_by(HoD, DoW) %>% 
+  summarise(numCrash = n()) %>% 
+  ggplot(., aes(x=HoD, y=DoW, fill=numCrash))+
+  geom_raster()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  scale_fill_gradient(low="lightgreen", high = "darkred", trans="sqrt")
